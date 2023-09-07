@@ -2,19 +2,17 @@ from flask import Flask, make_response
 from flask_restful import Resource, Api, reqparse
 from flask_cors import CORS
 from threading import Thread
-import poe
+from poe_api_wrapper import PoeApi
 import time
 import uuid
 import json
-import logging
-
 
 app = Flask(__name__)
 api = Api(app)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Global variable
-chatbotName = 'openbiplatform'
+chatbotName = 'open-bi-platform'
 
 threads = {}
 
@@ -38,19 +36,19 @@ class WorkerThread(Thread):
         
     def run(self):
         try:
-            # Start logging
-            poe.logger.setLevel(logging.INFO)
-            
             # Import poe key
-            client = poe.Client(self.key)
+            client = PoeApi(self.key, proxy=False)
             
             # execute message
-            for chunk in client.send_message(chatbot=chatbotName, message=self.message, with_chat_break=True, timeout=20, async_recv=True, suggest_callback=None):
+            for chunk in client.send_message(chatbotName, self.message):
                 pass
             result = chunk["text"]
             
-            # purge the entire conversation
-            client.purge_conversation(chatbotName)
+            # Get chatCode from the last message
+            chatCode = chunk["chatCode"]
+            
+            # Delete chat using chatCode
+            client.delete_chat(chatbotName, chatCode=chatCode)
             
             time.sleep(5)
             
